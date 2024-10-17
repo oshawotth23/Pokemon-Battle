@@ -1,126 +1,159 @@
 <template>
   <div id="app">
-    <img src="https://upload.wikimedia.org/wikipedia/it/d/de/Pok%C3%A9mon_Battle_Revolution.png" alt="Pokemon Logo" class="logo" />
-    
-    <div v-if="!gameStarted">
-      <h2>Selecciona el número de rondas</h2>
-      <button @click="startGame(2)">2 Rondas</button>
-      <button @click="startGame(3)">3 Rondas</button>
-      <button @click="startGame(4)">4 Rondas</button>
+    <img
+      src="https://upload.wikimedia.org/wikipedia/it/d/de/Pok%C3%A9mon_Battle_Revolution.png"
+      alt="Logo Pokémon"
+      class="logo"
+    />
+
+    <div v-if="!juegoIniciado">
+      <h2>Elige la cantidad de batallas</h2>
+      <button @click="iniciarJuego(2)">2 Batallas</button>
+      <button @click="iniciarJuego(3)">3 Batallas</button>
+      <button @click="iniciarJuego(4)">4 Batallas</button>
     </div>
 
     <div v-else>
       <div class="card-container">
         <div class="poke-card">
-          <form @submit.prevent="searchPokemon1" class="search-form">
-            <input type="text" v-model="pokemonName1" autocomplete="off" placeholder="Busca un Pokémon (Jugador 1)" />
-            <button @click.prevent="getRandomPokemon1" class="random-button">Generar Pokémon Aleatorio</button>
-          </form>
-          <div :class="['poke-card-content', { 'poke-card-expanded': !noResult1 }]">
-            <div class="img-container" :style="backgroundStyle1">
+          <h2 class="player-title">Guerrero 1</h2>
+          <div :class="['poke-card-content', { 'poke-card-expanded': !sinResultado1 }]">
+            <div class="img-container" :style="fondoStyle1">
               <img class="poke-img" :src="pokeImgSrc1" alt="Pokémon" />
             </div>
-            <div v-if="noResult1" class="poke-message">{{ pokeMessage1 }}</div>
+            <div v-if="sinResultado1" class="poke-message">{{ pokeMessage1 }}</div>
             <div v-else class="poke-info">
-              <div class="poke-name">Jugador 1: {{ pokeName1 }}</div>
+              <div class="poke-name">{{ pokeName1 }}</div>
               <div class="poke-id">{{ pokeIdText1 }}</div>
-              <div class="poke-type-title">Tipo de Pokémon:</div>
+              <div class="poke-type-title">Tipos del Pokémon:</div>
               <div class="poke-types">
-                <div v-for="type in pokeTypes1" :key="type" :style="{ backgroundColor: typeColors[type] }" class="poke-type">
-                  {{ type }}
+                <div
+                  v-for="tipo in pokeTypes1"
+                  :key="tipo"
+                  :style="{ backgroundColor: typeColors[tipo] }"
+                  class="poke-type"
+                >
+                  {{ tipo }}
                 </div>
               </div>
-              <select v-model="selectedStat1" class="stat-select" @change="updateStat1">
-                <option disabled value="">Selecciona una estadística</option>
+              <select v-model="estadisticaSeleccionada1" class="stat-select" @change="actualizarEstadistica1">
+                <option disabled value="">Elige una estadística</option>
                 <option v-for="stat in pokeStats" :key="stat">{{ stat }}</option>
               </select>
-              <div v-if="selectedStat1" class="stat-display">
-                <div class="stat-label">{{ selectedStat1 }}: <span class="stat-value">{{ statValue1 }}</span></div>
+              <div v-if="estadisticaSeleccionada1" class="stat-display">
+                <div class="stat-label" style="font-weight: bold; color: #D5006D;">
+                  {{ estadisticaSeleccionada1 }}: 
+                  <span class="stat-value">{{ valorEstadistica1 }}</span> / 225
+                </div>
                 <div class="progress-container">
-                  <div class="progress-bar" :style="{ width: (statValue1 / 225) * 100 + '%' }"></div>
+                  <div class="progress-bar" :style="{ width: (valorEstadistica1 / 225) * 100 + '%' }"></div>
                 </div>
               </div>
             </div>
           </div>
+          <button 
+            @click="buscarPokemonAleatorio1" 
+            class="random-button" 
+            :disabled="botonAleatorioDeshabilitado1 || juegoTerminado || batallaEnCurso"
+            :class="{ 'disabled-button': botonAleatorioDeshabilitado1 || juegoTerminado || batallaEnCurso }"
+          >
+            Aleatorio
+          </button>
         </div>
 
+        <div class="stats-card">
+          <h2 class="stats-title">Estadísticas de la Batalla</h2>
+          <p>Ronda: {{ rondaActual }} de {{ rondasTotales }}</p>
+          <p>Puntos Guerrero 1: {{ puntuacionJugador1 }}</p>
+          <p>Puntos Guerrero 2: {{ puntuacionJugador2 }}</p>
+          <p v-if="resultadoBatalla" class="battle-result">{{ resultadoBatalla }}</p>
+          <button 
+            @click="batalla" 
+            class="battle-button"
+            :disabled="!puedePelear || juegoTerminado"
+          >
+            ¡A PELEAR!
+          </button>
+          <button v-if="juegoTerminado" @click="reiniciarJuego" class="reset-button">REINICIAR</button>
+        </div>
         <div class="poke-card">
-          <form @submit.prevent="searchPokemon2" class="search-form">
-            <input type="text" v-model="pokemonName2" autocomplete="off" placeholder="Busca un Pokémon (Jugador 2)" />
-            <button @click.prevent="getRandomPokemon2" class="random-button">Generar Pokémon Aleatorio</button>
-          </form>
-          <div :class="['poke-card-content', { 'poke-card-expanded': !noResult2 }]">
-            <div class="img-container" :style="backgroundStyle2">
+          <h2 class="player-title">Guerrero 2</h2>
+          <div :class="['poke-card-content', { 'poke-card-expanded': !sinResultado2 }]">
+            <div class="img-container" :style="fondoStyle2">
               <img class="poke-img" :src="pokeImgSrc2" alt="Pokémon" />
             </div>
-            <div v-if="noResult2" class="poke-message">{{ pokeMessage2 }}</div>
+            <div v-if="sinResultado2" class="poke-message">{{ pokeMessage2 }}</div>
             <div v-else class="poke-info">
-              <div class="poke-name">Jugador 2: {{ pokeName2 }}</div>
+              <div class="poke-name">{{ pokeName2 }}</div>
               <div class="poke-id">{{ pokeIdText2 }}</div>
-              <div class="poke-type-title">Tipo de Pokémon:</div>
+              <div class="poke-type-title">Tipos del Pokémon:</div>
               <div class="poke-types">
-                <div v-for="type in pokeTypes2" :key="type" :style="{ backgroundColor: typeColors[type] }" class="poke-type">
-                  {{ type }}
+                <div
+                  v-for="tipo in pokeTypes2"
+                  :key="tipo"
+                  :style="{ backgroundColor: typeColors[tipo] }"
+                  class="poke-type"
+                >
+                  {{ tipo }}
                 </div>
               </div>
-              <select v-model="selectedStat2" class="stat-select" @change="updateStat2">
-                <option disabled value="">Selecciona una estadística</option>
+              <select v-model="estadisticaSeleccionada2" class="stat-select" @change="actualizarEstadistica2">
+                <option disabled value="">Elige una estadística</option>
                 <option v-for="stat in pokeStats" :key="stat">{{ stat }}</option>
               </select>
-              <div v-if="selectedStat2" class="stat-display">
-                <div class="stat-label">{{ selectedStat2 }}: <span class="stat-value">{{ statValue2 }}</span></div>
+              <div v-if="estadisticaSeleccionada2" class="stat-display">
+                <div class="stat-label" style="font-weight: bold; color: #D5006D;">
+                  {{ estadisticaSeleccionada2 }}: 
+                  <span class="stat-value">{{ valorEstadistica2 }}</span> / 225
+                </div>
                 <div class="progress-container">
-                  <div class="progress-bar" :style="{ width: (statValue2 / 225) * 100 + '%' }"></div>
+                  <div class="progress-bar" :style="{ width: (valorEstadistica2 / 225) * 100 + '%' }"></div>
                 </div>
               </div>
             </div>
           </div>
+          <button 
+            @click="buscarPokemonAleatorio2" 
+            class="random-button" 
+            :disabled="botonAleatorioDeshabilitado2 || juegoTerminado || batallaEnCurso"
+            :class="{ 'disabled-button': botonAleatorioDeshabilitado2 || juegoTerminado || batallaEnCurso }"
+          >
+            Aleatorio
+          </button>
         </div>
-      </div>
-
-      <button @click="battle" class="battle-button" :disabled="!canBattle">A PELEAR</button>
-      <div v-if="battleResult" class="battle-result">{{ battleResult }}</div>
-
-      <div v-if="currentRound === totalRounds" class="score-board">
-        <h3>Resultado Final</h3>
-        <p>Jugador 1 Puntos: {{ player1Score }}</p>
-        <p>Jugador 2 Puntos: {{ player2Score }}</p>
-        <button @click="resetGame">Regresar a la pantalla de inicio</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref } from 'vue';
 export default {
   data() {
     return {
-      gameStarted: false,
-      totalRounds: 0,
-      currentRound: 0,
-      player1Score: 0,
-      player2Score: 0,
-      
-      pokemonName1: '',
+      juegoIniciado: false,
+      rondasTotales: 0,
+      rondaActual: 0,
+      puntuacionJugador1: 0,
+      puntuacionJugador2: 0,
+      juegoTerminado: false,
+
       pokeName1: 'Pokedex',
       pokeIdText1: '',
       pokeImgSrc1: 'https://i.pinimg.com/originals/a6/4f/c7/a64fc73a5a257f7c6797205bd46d4842.png',
       pokeTypes1: [],
       pokeMessage1: '',
-      noResult1: true,
-      selectedStat1: '',
-      statValue1: null,
+      sinResultado1: true,
+      estadisticaSeleccionada1: '',
+      valorEstadistica1: null,
 
-      pokemonName2: '',
       pokeName2: 'Pokedex',
       pokeIdText2: '',
       pokeImgSrc2: 'https://i.pinimg.com/originals/a6/4f/c7/a64fc73a5a257f7c6797205bd46d4842.png',
       pokeTypes2: [],
       pokeMessage2: '',
-      noResult2: true,
-      selectedStat2: '',
-      statValue2: null,
+      sinResultado2: true,
+      estadisticaSeleccionada2: '',
+      valorEstadistica2: null,
 
       pokeStats: ['hp', 'attack', 'defense', 'special-attack', 'special-defense', 'speed'],
 
@@ -144,29 +177,29 @@ export default {
         fighting: '#2F2F2F',
         default: '#2A1A1F',
       },
-      weaknessesMap: {},
-      battleResult: '',
+      resultadoBatalla: '',
+      puedePelear: false,
+      botonAleatorioDeshabilitado1: false,
+      botonAleatorioDeshabilitado2: false,
+      batallaEnCurso: false,
     };
   },
   computed: {
-    canBattle() {
-      return !this.noResult1 && !this.noResult2 && this.selectedStat1 && this.selectedStat2;
-    },
-    backgroundStyle1() {
-      const mainType = this.pokeTypes1[0] || 'default';
-      const bgColor = this.typeColors[mainType];
+    fondoStyle1() {
+      const tipoPrincipal = this.pokeTypes1[0] || 'default';
+      const colorFondo = this.typeColors[tipoPrincipal];
       return {
-        background: `radial-gradient(${bgColor} 33%, transparent 33%), rgba(0, 0, 0, 0.1)`,
+        background: `radial-gradient(${colorFondo} 33%, transparent 33%), rgba(0, 0, 0, 0.1)`,
         backgroundSize: '10px 10px',
         borderRadius: '50%',
         padding: '15px',
       };
     },
-    backgroundStyle2() {
-      const mainType = this.pokeTypes2[0] || 'default';
-      const bgColor = this.typeColors[mainType];
+    fondoStyle2() {
+      const tipoPrincipal = this.pokeTypes2[0] || 'default';
+      const colorFondo = this.typeColors[tipoPrincipal];
       return {
-        background: `radial-gradient(${bgColor} 33%, transparent 33%), rgba(0, 0, 0, 0.1)`,
+        background: `radial-gradient(${colorFondo} 33%, transparent 33%), rgba(0, 0, 0, 0.1)`,
         backgroundSize: '10px 10px',
         borderRadius: '50%',
         padding: '15px',
@@ -174,177 +207,179 @@ export default {
     },
   },
   methods: {
-    startGame(rounds) {
-      this.totalRounds = rounds;
-      this.currentRound = 0;
-      this.player1Score = 0;
-      this.player2Score = 0;
-      this.gameStarted = true;
-      this.resetPokemonData();
+    iniciarJuego(cantidadBatallas) {
+      this.juegoIniciado = true;
+      this.rondasTotales = cantidadBatallas;
+      this.rondaActual = 1;
+      this.puntuacionJugador1 = 0;
+      this.puntuacionJugador2 = 0;
+      this.juegoTerminado = false;
+      this.buscarPokemonAleatorio1();
+      this.buscarPokemonAleatorio2();
     },
-    resetPokemonData() {
-      this.pokemonName1 = '';
-      this.pokeName1 = 'Pokedex';
-      this.pokeIdText1 = '';
-      this.pokeImgSrc1 = 'https://i.pinimg.com/originals/a6/4f/c7/a64fc73a5a257f7c6797205bd46d4842.png';
-      this.pokeTypes1 = [];
-      this.pokeMessage1 = '';
-      this.noResult1 = true;
-      this.selectedStat1 = '';
-      this.statValue1 = null;
-
-      this.pokemonName2 = '';
-      this.pokeName2 = 'Pokedex';
-      this.pokeIdText2 = '';
-      this.pokeImgSrc2 = 'https://i.pinimg.com/originals/a6/4f/c7/a64fc73a5a257f7c6797205bd46d4842.png';
-      this.pokeTypes2 = [];
-      this.pokeMessage2 = '';
-      this.noResult2 = true;
-      this.selectedStat2 = '';
-      this.statValue2 = null;
+    buscarPokemonAleatorio1() {
+      this.sinResultado1 = false;
+      this.botonAleatorioDeshabilitado1 = true;
+      fetch('https://pokeapi.co/api/v2/pokemon/' + Math.floor(Math.random() * 1000))
+        .then(response => response.json())
+        .then(data => {
+          this.pokeName1 = data.name;
+          this.pokeIdText1 = `#${data.id}`;
+          this.pokeTypes1 = data.types.map(t => t.type.name);
+          this.pokeImgSrc1 = data.sprites.front_default;
+          this.botonAleatorioDeshabilitado1 = false;
+        })
+        .catch(() => {
+          this.pokeMessage1 = 'No se encontró Pokémon.';
+          this.botonAleatorioDeshabilitado1 = false;
+        });
     },
-    async searchPokemon1() {
-      try {
-        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${this.pokemonName1.toLowerCase()}`);
-        if (!response.ok) throw new Error('No se encontró el Pokémon');
-        const data = await response.json();
-        this.pokeName1 = data.name.charAt(0).toUpperCase() + data.name.slice(1);
-        this.pokeIdText1 = `#${data.id}`;
-        this.pokeImgSrc1 = data.sprites.front_default;
-        this.pokeTypes1 = data.types.map(type => type.type.name);
-        this.noResult1 = false;
-        this.pokeMessage1 = '';
-      } catch (error) {
-        this.noResult1 = true;
-        this.pokeMessage1 = error.message;
-      }
+    buscarPokemonAleatorio2() {
+      this.sinResultado2 = false;
+      this.botonAleatorioDeshabilitado2 = true;
+      fetch('https://pokeapi.co/api/v2/pokemon/' + Math.floor(Math.random() * 1000))
+        .then(response => response.json())
+        .then(data => {
+          this.pokeName2 = data.name;
+          this.pokeIdText2 = `#${data.id}`;
+          this.pokeTypes2 = data.types.map(t => t.type.name);
+          this.pokeImgSrc2 = data.sprites.front_default;
+          this.botonAleatorioDeshabilitado2 = false;
+        })
+        .catch(() => {
+          this.pokeMessage2 = 'No se encontró Pokémon.';
+          this.botonAleatorioDeshabilitado2 = false;
+        });
     },
-    async getRandomPokemon1() {
-      const randomId = Math.floor(Math.random() * 898) + 1;
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
-      const data = await response.json();
-      this.pokeName1 = data.name.charAt(0).toUpperCase() + data.name.slice(1);
-      this.pokeIdText1 = `#${data.id}`;
-      this.pokeImgSrc1 = data.sprites.front_default;
-      this.pokeTypes1 = data.types.map(type => type.type.name);
-      this.noResult1 = false;
+    actualizarEstadistica1() {
+      const stat = this.estadisticaSeleccionada1;
+      this.valorEstadistica1 = this.pokemon1[stat];
     },
-    async searchPokemon2() {
-      try {
-        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${this.pokemonName2.toLowerCase()}`);
-        if (!response.ok) throw new Error('No se encontró el Pokémon');
-        const data = await response.json();
-        this.pokeName2 = data.name.charAt(0).toUpperCase() + data.name.slice(1);
-        this.pokeIdText2 = `#${data.id}`;
-        this.pokeImgSrc2 = data.sprites.front_default;
-        this.pokeTypes2 = data.types.map(type => type.type.name);
-        this.noResult2 = false;
-        this.pokeMessage2 = '';
-      } catch (error) {
-        this.noResult2 = true;
-        this.pokeMessage2 = error.message;
-      }
+    actualizarEstadistica2() {
+      const stat = this.estadisticaSeleccionada2;
+      this.valorEstadistica2 = this.pokemon2[stat];
     },
-    async getRandomPokemon2() {
-      const randomId = Math.floor(Math.random() * 898) + 1;
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
-      const data = await response.json();
-      this.pokeName2 = data.name.charAt(0).toUpperCase() + data.name.slice(1);
-      this.pokeIdText2 = `#${data.id}`;
-      this.pokeImgSrc2 = data.sprites.front_default;
-      this.pokeTypes2 = data.types.map(type => type.type.name);
-      this.noResult2 = false;
+    batalla() {
+      this.batallaEnCurso = true;
+      // ... código para batallar
     },
-    updateStat1() {
-      const stat = this.selectedStat1.toLowerCase();
-      this.statValue1 = this.pokeStats.includes(stat) ? Math.floor(Math.random() * 225) : null;
-    },
-    updateStat2() {
-      const stat = this.selectedStat2.toLowerCase();
-      this.statValue2 = this.pokeStats.includes(stat) ? Math.floor(Math.random() * 225) : null;
-    },
-    battle() {
-      if (this.statValue1 > this.statValue2) {
-        this.battleResult = '¡Jugador 1 gana esta ronda!';
-        this.player1Score += 1;
-      } else if (this.statValue1 < this.statValue2) {
-        this.battleResult = '¡Jugador 2 gana esta ronda!';
-        this.player2Score += 1;
-      } else {
-        this.battleResult = '¡Es un empate!';
-      }
-      this.currentRound++;
-      this.checkGameEnd();
-    },
-    checkGameEnd() {
-      if (this.currentRound >= this.totalRounds) {
-        this.battleResult = `¡Juego terminado! Jugador 1: ${this.player1Score}, Jugador 2: ${this.player2Score}`;
-      }
-    },
-    resetGame() {
-      this.gameStarted = false;
-      this.resetPokemonData();
-      this.battleResult = '';
+    reiniciarJuego() {
+      this.juegoIniciado = false;
+      this.juegoTerminado = false;
     },
   },
 };
 </script>
 
-<style scoped>
+<style>
+#app {
+  font-family: Arial, sans-serif;
+}
+
 .logo {
   width: 200px;
+  margin: 0 auto;
+  display: block;
 }
+
 .card-container {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   margin: 20px;
 }
+
 .poke-card {
-  border: 2px solid #ccc;
-  border-radius: 10px;
-  padding: 15px;
-  width: 250px;
+  flex: 1;
+  border: 1px solid #e1e1e1;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 5px;
 }
+
 .poke-card-content {
-  display: flex;
-  flex-direction: column;
+  position: relative;
 }
-.poke-name {
-  font-size: 20px;
+
+.poke-card-expanded {
+  height: 400px;
+  transition: all 0.5s ease;
+}
+
+.poke-name, .poke-id {
+  text-align: center;
   font-weight: bold;
 }
+
 .poke-types {
   display: flex;
-  gap: 5px;
+  justify-content: center;
 }
+
 .poke-type {
   padding: 5px;
+  margin: 2px;
   border-radius: 5px;
-  color: #fff;
+  color: white;
 }
-.stat-select {
-  margin: 10px 0;
+
+.stats-card {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #e1e1e1;
+  border-radius: 5px;
 }
+
+.battle-button {
+  background-color: #00bcd4;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.reset-button {
+  background-color: #e91e63;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.random-button {
+  background-color: #9c27b0;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.disabled-button {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
 .progress-container {
+  width: 100%;
   height: 10px;
-  background: #eee;
+  background-color: #e0e0e0;
   border-radius: 5px;
-  overflow: hidden;
 }
+
 .progress-bar {
   height: 100%;
-  background: #76c7c0;
+  background-color: #76ff03;
+  border-radius: 5px;
 }
-.battle-button {
-  margin: 20px;
-  padding: 10px;
-  font-size: 16px;
-}
-.battle-result {
+
+.stats-title {
   font-size: 18px;
-  margin: 10px 0;
+  font-weight: bold;
 }
-.score-board {
-  margin-top: 20px;
+
+.stats-label {
+  color: #ff5722;
 }
 </style>
